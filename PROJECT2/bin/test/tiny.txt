@@ -1,0 +1,12 @@
+{ This is a comment }
+
+if x < 10 then
+    read y;
+    write y;
+else
+    y := 20;
+end
+
+repeat
+    y := y + 1;
+until y >= 30

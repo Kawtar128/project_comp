@@ -1,0 +1,201 @@
+package parser; 
+
+parser code {:
+    import java_cup.runtime.Symbol;
+    import java.util.ArrayList;
+    import java.util.List;
+    import lexer.TinyLexer;
+    import parser.Node;
+
+:};
+
+terminal IF, THEN, ELSE, END, REPEAT, UNTIL, READ, WRITE;
+terminal ID, NUM;
+terminal ASSIGN, SEMICOLON, LPAREN, RPAREN;
+terminal PLUS, MINUS, TIMES, OVER;
+terminal EQ, LT, GT, LE, GE, NE;
+terminal relop, addop, mulop; 
+
+non terminal program, stmt_sequence, statement, if_stmt, repeat_stmt, assign_stmt, read_stmt, write_stmt;
+non terminal exp, simple_exp, term, factor;
+non terminal stmt_sequence_p, if_rear, exp_rear, simple_exp_p, term_p;
+
+start with program;
+
+program ::= stmt_sequence {: 
+    Node programNode = new Node("program");
+    programNode.addChild($1);
+    RESULT = programNode; 
+:};
+
+stmt_sequence ::= statement stmt_sequence_p {: 
+    Node stmtSeqNode = new Node("stmt_sequence");
+    stmtSeqNode.addChild($1);
+    stmtSeqNode.addChild($2);
+    RESULT = stmtSeqNode; 
+:};
+
+stmt_sequence_p ::= SEMICOLON statement stmt_sequence_p {: 
+    Node stmtSeqPNode = new Node("stmt_sequence_p");
+    stmtSeqPNode.addChild(new Node(";"));
+    stmtSeqPNode.addChild($2);
+    stmtSeqPNode.addChild($3);
+    RESULT = stmtSeqPNode; 
+:} 
+    | {: 
+    RESULT = new Node("epsilon"); 
+:};
+
+statement ::= if_stmt {: 
+    RESULT = $1; 
+:}
+    | repeat_stmt {: 
+    RESULT = $1; 
+:}
+    | assign_stmt {: 
+    RESULT = $1; 
+:}
+    | read_stmt {: 
+    RESULT = $1; 
+:}
+    | write_stmt {: 
+    RESULT = $1; 
+:};
+
+if_stmt ::= IF exp THEN stmt_sequence if_rear {: 
+    Node ifNode = new Node("if_stmt");
+    ifNode.addChild(new Node("if"));
+    ifNode.addChild($2);
+    ifNode.addChild(new Node("then"));
+    ifNode.addChild($4);
+    ifNode.addChild($5);
+    RESULT = ifNode; 
+:};
+
+if_rear ::= END {: 
+    Node ifRearNode = new Node("if_rear");
+    ifRearNode.addChild(new Node("end"));
+    RESULT = ifRearNode; 
+:} 
+    | ELSE stmt_sequence END {: 
+    Node ifRearNode = new Node("if_rear");
+    ifRearNode.addChild(new Node("else"));
+    ifRearNode.addChild($2);
+    ifRearRearNode.addChild(new Node("end"));
+    RESULT = ifRearNode; 
+:};
+
+repeat_stmt ::= REPEAT stmt_sequence UNTIL exp {: 
+    Node repeatNode = new Node("repeat_stmt");
+    repeatNode.addChild(new Node("repeat"));
+    repeatNode.addChild($2);
+    repeatNode.addChild(new Node("until"));
+    repeatNode.addChild($4);
+    RESULT = repeatNode; 
+:};
+
+assign_stmt ::= ID ASSIGN exp {: 
+    Node assignNode = new Node("assign_stmt");
+    assignNode.addChild(new Node("id", (String)$1.value));
+    assignNode.addChild(new Node(":="));
+    assignNode.addChild($3);
+    RESULT = assignNode; 
+:};
+
+read_stmt ::= READ ID {: 
+    Node readNode = new Node("read_stmt");
+    readNode.addChild(new Node("read"));
+    readNode.addChild(new Node("id", (String)$2.value));
+    RESULT = readNode; 
+:};
+
+write_stmt ::= WRITE exp {: 
+    Node writeNode = new Node("write_stmt");
+    writeNode.addChild(new Node("write"));
+    writeNode.addChild($2);
+    RESULT = writeNode; 
+:};
+
+exp ::= simple_exp exp_rear {: 
+    Node expNode = new Node("exp");
+    expNode.addChild($1);
+    expNode.addChild($2);
+    RESULT = expNode; 
+:};
+
+exp_rear ::= relop simple_exp {: 
+    Node expRearNode = new Node("exp_rear");
+    expRearNode.addChild($1);
+    expRearRearNode.addChild($2);
+    RESULT = expRearNode; 
+:} 
+    | {: 
+    RESULT = new Node("epsilon"); 
+:};
+
+simple_exp ::= term simple_exp_p {: 
+    Node simpleExpNode = new Node("simple_exp");
+    simpleExpNode.addChild($1);
+    simpleExpNode.addChild($2);
+    RESULT = simpleExpNode; 
+:};
+
+simple_exp_p ::= addop term simple_exp_p {: 
+    Node simpleExpPNode = new Node("simple_exp_p");
+    simpleExpPNode.addChild($1);
+    simpleExpPNode.addChild($2);
+    simpleExpPNode.addChild($3);
+    RESULT = simpleExpPNode; 
+:} 
+    | {: 
+    RESULT = new Node("epsilon"); 
+:};
+
+term ::= factor term_p {: 
+    Node termNode = new Node("term");
+    termNode.addChild($1);
+    termNode.addChild($2);
+    RESULT = termNode; 
+:};
+
+term_p ::= mulop factor term_p {: 
+    Node termPNode = new Node("term_p");
+    termPNode.addChild($1);
+    termPNode.addChild($2);
+    termPNode.addChild($3);
+    RESULT = termPNode; 
+:} 
+    | {: 
+    RESULT = new Node("epsilon"); 
+:};
+
+factor ::= LPAREN exp RPAREN {: 
+    Node factorNode = new Node("factor");
+    factorNode.addChild(new Node("("));
+    factorNode.addChild($2);
+    factorNode.addChild(new Node(")"));
+    RESULT = factorNode; 
+:} 
+    | NUM {: 
+    Node factorNode = new Node("factor");
+    factorNode.addChild(new Node("num", (String)$1.value));
+    RESULT = factorNode; 
+:} 
+    | ID {: 
+    Node factorNode = new Node("factor");
+    factorNode.addChild(new Node("id", (String)$1.value));
+    RESULT = factorNode; 
+:};
+
+relop ::= EQ {: RESULT = new Node("="); :}
+    | LT {: RESULT = new Node("<"); :}
+    | GT {: RESULT = new Node(">"); :}
+    | LE {: RESULT = new Node("<="); :}
+    | GE {: RESULT = new Node(">="); :}
+    | NE {: RESULT = new Node("!="); :};
+
+addop ::= PLUS {: RESULT = new Node("+"); :}
+    | MINUS {: RESULT = new Node("-"); :};
+
+mulop ::= TIMES {: RESULT = new Node("*"); :}
+    | OVER {: RESULT = new Node("/"); :};
